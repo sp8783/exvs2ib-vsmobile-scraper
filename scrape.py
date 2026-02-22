@@ -5,7 +5,6 @@ import argparse
 import json
 import sys
 import time
-from datetime import date
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from scraper.parsers.daily import parse_daily_page
@@ -32,7 +31,7 @@ def main():
     parser.add_argument('--output', default=None, help='Output JSON file path')
     args = parser.parse_args()
 
-    output_path = args.output or f'output_{date.today().strftime("%Y%m%d")}.json'
+    output_path = args.output  # resolved after fetching game_date below
 
     session = load_session(args.cookies)
 
@@ -56,6 +55,11 @@ def main():
     self_name = first_page['self_name']
     all_matches = list(first_page['matches'])
     max_page = first_page['max_page']
+
+    # "2026/02/14(土)" → "20260214"
+    game_date_str = first_page['game_date'].split('(')[0].replace('/', '')
+    if not output_path:
+        output_path = f'output_{self_name}_{game_date_str}.json'
 
     print(f'  Date : {first_page["game_date"]}')
     print(f'  Shop : {first_page["shop_name"]}')
