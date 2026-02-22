@@ -6,6 +6,17 @@ def _date_to_cs(a, b, c):
     return a * 6000 + b * 100 + c
 
 
+def _cs_to_str(cs):
+    """Convert centiseconds back to 'M:SS.CC' string matching the original JS Date args."""
+    if cs is None:
+        return None
+    a = cs // 6000
+    remainder = cs % 6000
+    b = remainder // 100
+    c = remainder % 100
+    return f'{a}:{b:02d}.{c:02d}'
+
+
 def parse_timeline_script(script):
     """
     Parse the vis.js timeline script block.
@@ -63,7 +74,9 @@ def parse_timeline_script(script):
             events.append({
                 'group': gm.group(1),
                 'start_cs': current_start_cs,
+                'start_str': _cs_to_str(current_start_cs),
                 'end_cs': current_end_cs,
+                'end_str': _cs_to_str(current_end_cs),
                 'class_name': cm.group(1) if cm else None,
                 'is_point': is_point,
             })
@@ -78,6 +91,19 @@ def parse_timeline_script(script):
         game_end_cs = _date_to_cs(int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
     return groups, events, game_end_cs
+
+
+def build_timeline_raw(groups, events, game_end_cs):
+    """
+    Build the raw timeline data dict for JSON output.
+    Suitable for reconstructing the vis.js visualization on a web app.
+    """
+    return {
+        'groups': groups,
+        'events': events,
+        'game_end_cs': game_end_cs,
+        'game_end_str': _cs_to_str(game_end_cs),
+    }
 
 
 def compute_timeline_stats(groups, events, game_end_cs):

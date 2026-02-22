@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from .timeline import parse_timeline_script, compute_timeline_stats
+from .timeline import parse_timeline_script, compute_timeline_stats, build_timeline_raw
 
 
 _DT_KEY_MAP = {
@@ -159,4 +159,8 @@ def parse_match(html, result_self, self_name):
         team_a['timeline_stats'] = _team_timeline_stats(player_stats, 'team1', result_self, 'team2')
         team_b['timeline_stats'] = _team_timeline_stats(player_stats, 'team2', result_b, 'team1')
 
-    return {'team_a': team_a, 'team_b': team_b}
+        timeline_raw = build_timeline_raw(groups, events, game_end_cs)
+    else:
+        timeline_raw = None
+
+    return {'team_a': team_a, 'team_b': team_b, 'timeline_raw': timeline_raw}
