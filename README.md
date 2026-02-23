@@ -1,2 +1,164 @@
 # exvs2ib-vsmobile-scraper
-機動戦士ガンダム エクストリームバーサス2 インフィニットブースト（EXVS2IB）のポータルサイト「VS.モバイル」から対戦履歴データを自動取得するツール
+
+機動戦士ガンダム エクストリームバーサス2 インフィニットブースト（EXVS2IB）のポータルサイト「VS.モバイル」から**店内対戦戦績**データを自動取得するツール。
+
+公式アプリでは店内対戦の詳細履歴（試合ごとのスコア・タイムライン等）を管理していないため、VS.モバイルの店内対戦戦績ページ（`/results/shop/`）をスクレイピングして JSON として出力する。
+
+## 必要環境
+
+- Python 3.10 以上
+- pip
+
+## セットアップ
+
+```bash
+pip install -r requirements.txt
+cp cookies.json.example cookies.json
+```
+
+`cookies.json` にブラウザからエクスポートした VS.モバイルのセッション Cookie を記入する（後述）。
+
+## Cookie の準備
+
+1. ブラウザで VS.モバイル（`web.vsmobile.jp`）にログインする
+2. EditThisCookie 等のブラウザ拡張でクッキーを JSON 形式でエクスポートする
+3. エクスポートした JSON を `cookies.json` として保存する
+
+`cookies.json` のフォーマット（EditThisCookie 形式）:
+
+```json
+[
+  {
+    "name": "_session_id",
+    "value": "your-session-value-here",
+    "domain": "web.vsmobile.jp"
+  }
+]
+```
+
+> **注意**: `cookies.json` は `.gitignore` 対象のため、誤ってコミットされない。
+
+## 使い方
+
+```bash
+python scrape.py
+```
+
+### オプション
+
+| オプション | デフォルト | 説明 |
+|-----------|-----------|------|
+| `--cookies` | `cookies.json` | Cookie ファイルのパス |
+| `--output` | `output_{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
+
+### 実行例
+
+```bash
+# デフォルト設定で実行
+python scrape.py
+
+# Cookie ファイルと出力先を指定
+python scrape.py --cookies cookies_alice.json --output alice_20260214.json
+```
+
+### 複数ユーザーを順に取得する場合
+
+```bash
+for player in alice bob; do
+    python scrape.py --cookies cookies_${player}.json
+    sleep 5
+done
+```
+
+## 出力形式
+
+出力ファイル名（デフォルト）: `output_{プレイヤー名}_{YYYYMMDD}.json`
+
+試合データのリスト（`match_ts` 昇順）を JSON で出力する。
+
+```json
+[
+  {
+    "match_ts": "1739500000",
+    "time": "14:32",
+    "game_date": "2026/02/14(土)",
+    "shop_name": "〇〇ゲームセンター",
+    "team_a": {
+      "team_name": "チームA",
+      "result": "win",
+      "players": [
+        {
+          "name": "プレイヤー1",
+          "player_param": "AbCdEfGh...",
+          "icon_url": "https://example.com/icon.png",
+          "mastery": "blue5",
+          "prefecture": "東京都",
+          "is_self": true,
+          "match_rank": 1,
+          "score": 12000,
+          "kills": 3,
+          "deaths": 1,
+          "damage_dealt": 8500,
+          "damage_received": 3200,
+          "exburst_damage": 1500
+        }
+      ]
+    },
+    "team_b": { "...": "..." },
+    "timeline_raw": {
+      "groups": {
+        "team1-1": "https://example.com/unit_icon.png"
+      },
+      "events": [
+        {
+          "group": "team1-1",
+          "start_cs": 1500,
+          "start_str": "0:15.00",
+          "end_cs": 4200,
+          "end_str": "0:42.00",
+          "class_name": "exbst-s",
+          "is_point": false
+        }
+      ],
+      "game_end_cs": 36000,
+      "game_end_str": "6:00.00"
+    }
+  }
+]
+```
+
+### フィールド説明
+
+**プレイヤー:**
+
+| フィールド | 説明 |
+|-----------|------|
+| `player_param` | プロフィール URL の `param` 値（プレイヤー識別子） |
+| `icon_url` | 使用機体のアイコン URL |
+| `mastery` | 習熟度クラス（例: `blue5`, `red3`） |
+| `prefecture` | 都道府県 |
+| `is_self` | Cookie のプレイヤー自身かどうか |
+| `match_rank` | 試合内順位（1〜4） |
+
+**タイムライン (`timeline_raw`):**
+
+| フィールド | 説明 |
+|-----------|------|
+| `groups` | グループID → 機体アイコン URL のマップ |
+| `events` | イベントリスト（EXバースト・被撃墜など） |
+| `game_end_cs` | 試合終了時刻（センチ秒） |
+| `game_end_str` | 試合終了時刻（`M:SS.CC` 形式） |
+
+タイムラインの `class_name` 主な値:
+
+| 値 | 意味 |
+|----|------|
+| `exbst-f` | EXバースト（格闘型）発動中 |
+| `exbst-s` | EXバースト（射撃型）発動中 |
+| `exbst-e` | EXバースト（延長型）発動中 |
+| `exbst-ov` | 覚醒中（OL） |
+| `ov` | 覚醒ゲージMAX（未発動） |
+| `xb` | エクストラバースト発動 |
+| `is_point: true` | 被撃墜イベント |
+
+時刻の単位はセンチ秒（cs）: `new Date(0, 0, 0, A, B, C)` → `A*6000 + B*100 + C` cs
