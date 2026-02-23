@@ -48,27 +48,35 @@ python scrape.py
 
 | オプション | デフォルト | 説明 |
 |-----------|-----------|------|
-| `--cookies` | `cookies.json` | Cookie ファイルのパス |
+| `--cookies` | `cookies.json` | Cookie ファイルのパス（単一ユーザー） |
+| `--cookies-all [PATH]` | `cookies_all.json` | 全ユーザー一括実行モード（後述） |
 | `--output` | `output_{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
 
 ### 実行例
 
 ```bash
-# デフォルト設定で実行
+# デフォルト設定で実行（cookies.json を使用）
 python scrape.py
 
 # Cookie ファイルと出力先を指定
 python scrape.py --cookies cookies_alice.json --output alice_20260214.json
 ```
 
-### 複数ユーザーを順に取得する場合
+### 複数ユーザーの一括実行
+
+複数ユーザーの Cookie を `cookies_{ユーザー名}.json` の形式でそれぞれ用意した後、`build_cookies.py` で一括管理ファイルを生成する。
 
 ```bash
-for player in alice bob; do
-    python scrape.py --cookies cookies_${player}.json
-    sleep 5
-done
+# 1. cookies_*.json を自動検出して cookies_all.json を生成
+python build_cookies.py
+
+# 2. 全ユーザー分を一括スクレイピング・マージして出力
+python scrape.py --cookies-all
 ```
+
+`--cookies-all` モードでは、全ユーザーの結果を `match_ts` キーで重複排除してマージする。出力ファイル名のデフォルトは `output_all_{YYYYMMDD}.json`。
+
+いずれかのユーザーの Cookie が期限切れだった場合はそのユーザーをスキップして処理を継続し、最後に警告を表示して終了コード `1` で終了する。
 
 ## 出力形式
 
