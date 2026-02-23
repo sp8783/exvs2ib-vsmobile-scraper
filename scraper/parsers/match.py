@@ -1,6 +1,8 @@
+from urllib.parse import parse_qs, urlparse
+
 from bs4 import BeautifulSoup
 
-from .timeline import parse_timeline_script, compute_timeline_stats, build_timeline_raw
+from .timeline import parse_timeline_script, build_timeline_raw
 
 
 _DT_KEY_MAP = {
@@ -18,7 +20,11 @@ def _strip_query(url):
 
 
 def _parse_team_members(box):
-    """Return {team_name, players: [{name, icon_url, is_self}]}."""
+    """
+    Parse panel1 team box.
+
+    Returns {team_name, players: [{name, player_param, icon_url, mastery, prefecture}]}
+    """
     team_name_el = box.select_one('h3 p.tag-name')
     team_name = team_name_el.get_text(strip=True) if team_name_el else ''
 
@@ -26,19 +32,55 @@ def _parse_team_members(box):
     for li in box.select('li.item'):
         name_el = li.select_one('span.name')
         icon_el = li.select_one('img.item-icon-img[data-original]')
+        mastery_el = li.select_one('span.mastery')
+        pref_el = li.select_one('p.col-stand.fz-s')
+        profile_a = li.select_one('a.right-arrow[href*="profile"]')
+
         name = name_el.get_text(strip=True) if name_el else ''
         icon_url = _strip_query(icon_el['data-original']) if icon_el else ''
-        players.append({'name': name, 'icon_url': icon_url})
+
+        player_param = None
+        if profile_a:
+            qs = parse_qs(urlparse(profile_a['href']).query)
+            player_param = qs.get('param', [None])[0]
+
+        mastery = None
+        if mastery_el:
+            extra = [c for c in mastery_el.get('class', []) if c != 'mastery']
+            mastery = extra[0] if extra else None
+
+        prefecture = pref_el.get_text(strip=True) if pref_el else None
+
+        players.append({
+            'name': name,
+            'player_param': player_param,
+            'icon_url': icon_url,
+            'mastery': mastery,
+            'prefecture': prefecture,
+        })
 
     return {'team_name': team_name, 'players': players}
 
 
 def _parse_score_box(box):
-    """Return list of {icon_url, score, kills, deaths, damage_dealt, damage_received, exburst_damage}."""
+    """
+    Parse panel3 score box.
+
+    Returns list of {icon_url, match_rank, score, kills, deaths,
+                     damage_dealt, damage_received, exburst_damage}
+    """
     player_scores = []
     for li in box.select('li.item'):
         icon_el = li.select_one('img.item-icon-img[data-original]')
         icon_url = _strip_query(icon_el['data-original']) if icon_el else ''
+
+        match_rank = None
+        for cls in li.get('class', []):
+            if cls.startswith('rank-band'):
+                try:
+                    match_rank = int(cls.replace('rank-band', ''))
+                except ValueError:
+                    pass
 
         scores = {}
         for dl in li.find_all('dl'):
@@ -48,14 +90,13 @@ def _parse_score_box(box):
                 continue
             key = _DT_KEY_MAP.get(dt.get_text(strip=True))
             if key:
-                # Get only direct text nodes (excludes <span>pt</span>)
                 raw = ''.join(t.strip() for t in dd.find_all(string=True, recursive=False)).strip()
                 try:
                     scores[key] = int(raw)
                 except ValueError:
                     scores[key] = raw
 
-        player_scores.append({'icon_url': icon_url, **scores})
+        player_scores.append({'icon_url': icon_url, 'match_rank': match_rank, **scores})
     return player_scores
 
 
@@ -68,28 +109,6 @@ def _merge_scores(team, score_list):
                 break
 
 
-def _team_timeline_stats(player_stats, team_prefix, team_result, opponent_prefix):
-    """Compute team-level timeline stats."""
-    own = {k: v for k, v in player_stats.items() if k.startswith(team_prefix + '-')}
-    opp = {k: v for k, v in player_stats.items() if k.startswith(opponent_prefix + '-')}
-
-    team_won = team_result == 'win'
-    won_without_enemy_ol = team_won and all(
-        not s['ol_available_occurred'] for s in opp.values()
-    )
-    lost_without_own_ol = (not team_won) and all(
-        not s['ol_available_occurred'] for s in own.values()
-    )
-    first_player = f'{team_prefix}-1'
-    xb_activations = player_stats.get(first_player, {}).get('xb_activations', 0)
-
-    return {
-        'won_without_enemy_ol': won_without_enemy_ol,
-        'lost_without_own_ol': lost_without_own_ol,
-        'xb_activations': xb_activations,
-    }
-
-
 def parse_match(html, result_self, self_name):
     """
     Parse a match_detail page.
@@ -100,8 +119,9 @@ def parse_match(html, result_self, self_name):
 
     Returns:
         {
-            team_a: {team_name, result, players: [...], timeline_stats},
-            team_b: {team_name, result, players: [...], timeline_stats},
+            team_a: {team_name, result, players: [...]},
+            team_b: {team_name, result, players: [...]},
+            timeline_raw: {groups, events, game_end_cs, game_end_str} or None,
         }
     """
     soup = BeautifulSoup(html, 'html.parser')
@@ -126,39 +146,15 @@ def parse_match(html, result_self, self_name):
     _merge_scores(team_b, _parse_score_box(p3_boxes[1]))
 
     # --- Result assignment ---
-    result_b = 'win' if result_self == 'lose' else 'lose'
     team_a['result'] = result_self
-    team_b['result'] = result_b
+    team_b['result'] = 'win' if result_self == 'lose' else 'lose'
 
-    # --- Timeline ---
+    # --- Timeline (raw data only) ---
     script_tag = soup.select_one('#panel2 script')
     script_content = script_tag.get_text() if script_tag else ''
 
     if script_content.strip():
         groups, events, game_end_cs = parse_timeline_script(script_content)
-        player_stats = compute_timeline_stats(groups, events, game_end_cs)
-
-        # Finalize burst_held_on_loss per player using team result
-        for gid, pst in player_stats.items():
-            if gid.startswith('team1-'):
-                team_result = result_self
-            else:
-                team_result = result_b
-            pst['burst_held_on_loss'] = pst.pop('burst_at_game_end') and (team_result == 'lose')
-
-        # Assign per-player stats (team1-x → team_a[x-1], team2-x → team_b[x-1])
-        for gid, pst in player_stats.items():
-            parts = gid.rsplit('-', 1)
-            idx = int(parts[1]) - 1
-            if gid.startswith('team1-') and idx < len(team_a['players']):
-                team_a['players'][idx]['timeline_stats'] = pst
-            elif gid.startswith('team2-') and idx < len(team_b['players']):
-                team_b['players'][idx]['timeline_stats'] = pst
-
-        # Assign team-level stats
-        team_a['timeline_stats'] = _team_timeline_stats(player_stats, 'team1', result_self, 'team2')
-        team_b['timeline_stats'] = _team_timeline_stats(player_stats, 'team2', result_b, 'team1')
-
         timeline_raw = build_timeline_raw(groups, events, game_end_cs)
     else:
         timeline_raw = None
