@@ -149,13 +149,13 @@ def _run_all(cookies_all_path, output_path):
 
 def main():
     parser = argparse.ArgumentParser(description='EXVS2IB VS.Mobile scraper')
-    parser.add_argument('--cookies', default='cookies.json', help='Path to cookies JSON file')
+    parser.add_argument('--cookies', default='cookies/cookies.json', help='Path to cookies JSON file')
     parser.add_argument(
         '--cookies-all',
         nargs='?',
-        const='cookies_all.json',
+        const='cookies/all.json',
         metavar='PATH',
-        help='Path to merged cookies JSON (default: cookies_all.json); run all users and merge output',
+        help='Path to merged cookies JSON (default: cookies/all.json); run all users and merge output',
     )
     parser.add_argument('--output', default=None, help='Output JSON file path')
     args = parser.parse_args()

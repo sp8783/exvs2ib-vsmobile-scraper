@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
-"""Merge cookies_*.json files into a single cookies_all.json for batch scraping."""
+"""Merge cookies/*.json files into a single cookies/all.json for batch scraping."""
 
 import glob
 import json
+import os
 import sys
 
-PATTERN = 'cookies_*.json'
-OUTPUT = 'cookies_all.json'
-EXCLUDE = {OUTPUT}
+COOKIES_DIR = 'cookies'
+OUTPUT = os.path.join(COOKIES_DIR, 'all.json')
 
 
 def main():
-    files = sorted(f for f in glob.glob(PATTERN) if f not in EXCLUDE)
+    pattern = os.path.join(COOKIES_DIR, '*.json')
+    files = sorted(f for f in glob.glob(pattern) if f != OUTPUT)
     if not files:
-        print(f'[ERROR] No cookie files found matching {PATTERN!r}', file=sys.stderr)
+        print(f'[ERROR] No cookie files found in {COOKIES_DIR}/', file=sys.stderr)
         sys.exit(1)
 
     all_cookies = {}
     for path in files:
-        name = path[len('cookies_'):-len('.json')]
+        name = os.path.splitext(os.path.basename(path))[0]
         with open(path, encoding='utf-8') as f:
             cookies = json.load(f)
         all_cookies[name] = cookies
