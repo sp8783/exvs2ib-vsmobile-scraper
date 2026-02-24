@@ -50,7 +50,7 @@ python scrape.py
 |-----------|-----------|------|
 | `--cookies` | `cookies/cookies.json` | Cookie ファイルのパス（単一ユーザー） |
 | `--cookies-all [PATH]` | `cookies_all.json` | 全ユーザー一括実行モード（後述） |
-| `--output` | `output_{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
+| `--output` | `output/{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
 
 ### 実行例
 
@@ -74,13 +74,13 @@ python build_cookies.py
 python scrape.py --cookies-all
 ```
 
-`--cookies-all` モードでは、全ユーザーの結果を `match_ts` キーで重複排除してマージする。出力ファイル名のデフォルトは `output_all_{YYYYMMDD}.json`。
+`--cookies-all` モードでは、全ユーザーの結果を `match_ts` キーで重複排除してマージする。出力ファイル名のデフォルトは `output/all_{YYYYMMDD}.json`。
 
 いずれかのユーザーの Cookie が期限切れだった場合はそのユーザーをスキップして処理を継続し、最後に警告を表示して終了コード `1` で終了する。
 
 ## 出力形式
 
-出力ファイル名（デフォルト）: `output_{プレイヤー名}_{YYYYMMDD}.json`
+出力ファイル名（デフォルト）: `output/{プレイヤー名}_{YYYYMMDD}.json`
 
 試合データのリスト（`match_ts` 昇順）を JSON で出力する。
 
