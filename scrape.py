@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -96,7 +97,8 @@ def _run_single(cookies_path, output_path):
         sys.exit(1)
 
     results.sort(key=lambda r: r['match_ts'])
-    out = output_path or f'output_{self_name}_{game_date_str}.json'
+    out = output_path or f'output/{self_name}_{game_date_str}.json'
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f'Done. {len(results)} matches written to {out}')
@@ -137,7 +139,8 @@ def _run_all(cookies_all_path, output_path):
         sys.exit(1)
 
     all_results.sort(key=lambda r: r['match_ts'])
-    out = output_path or f'output_all_{game_date_str}.json'
+    out = output_path or f'output/all_{game_date_str}.json'
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(all_results, f, ensure_ascii=False, indent=2)
     print(f'\nDone. {len(all_results)} unique matches written to {out}')
