@@ -211,4 +211,4 @@ CLAUDE.md
 
 # Scraper secrets and output
 cookies/*.json
-output_*.json
+output/*.json
