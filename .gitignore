@@ -210,5 +210,5 @@ __marimo__/
 CLAUDE.md
 
 # Scraper secrets and output
-cookies*.json
-output_*.json
+cookies/*.json
+output/*.json

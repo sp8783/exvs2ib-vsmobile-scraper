@@ -13,18 +13,20 @@
 
 ```bash
 pip install -r requirements.txt
-cp cookies.json.example cookies.json
+cp cookies.json.example cookies/cookies.json
 ```
 
-`cookies.json` にブラウザからエクスポートした VS.モバイルのセッション Cookie を記入する（後述）。
+`cookies/cookies.json` にブラウザからエクスポートした VS.モバイルのセッション Cookie を記入する（後述）。
 
 ## Cookie の準備
 
 1. ブラウザで VS.モバイル（`web.vsmobile.jp`）にログインする
 2. EditThisCookie 等のブラウザ拡張でクッキーを JSON 形式でエクスポートする
-3. エクスポートした JSON を `cookies.json` として保存する
+3. エクスポートした JSON を `cookies/{ユーザー名}.json` として `cookies/` ディレクトリに保存する
 
-`cookies.json` のフォーマット（EditThisCookie 形式）:
+`cookies/` ディレクトリは `.gitignore` 対象（JSON ファイルのみ）のため、誤ってコミットされない。
+
+Cookie ファイルのフォーマット（EditThisCookie 形式）:
 
 ```json
 [
@@ -36,8 +38,6 @@ cp cookies.json.example cookies.json
 ]
 ```
 
-> **注意**: `cookies.json` は `.gitignore` 対象のため、誤ってコミットされない。
-
 ## 使い方
 
 ```bash
@@ -48,31 +48,39 @@ python scrape.py
 
 | オプション | デフォルト | 説明 |
 |-----------|-----------|------|
-| `--cookies` | `cookies.json` | Cookie ファイルのパス |
-| `--output` | `output_{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
+| `--cookies` | `cookies/cookies.json` | Cookie ファイルのパス（単一ユーザー） |
+| `--cookies-all [PATH]` | `cookies_all.json` | 全ユーザー一括実行モード（後述） |
+| `--output` | `output/{プレイヤー名}_{日付}.json` | 出力ファイルのパス |
 
 ### 実行例
 
 ```bash
-# デフォルト設定で実行
+# デフォルト設定で実行（cookies.json を使用）
 python scrape.py
 
 # Cookie ファイルと出力先を指定
-python scrape.py --cookies cookies_alice.json --output alice_20260214.json
+python scrape.py --cookies cookies/alice.json --output alice_20260214.json
 ```
 
-### 複数ユーザーを順に取得する場合
+### 複数ユーザーの一括実行
+
+各ユーザーの Cookie を `cookies/{ユーザー名}.json` として `cookies/` ディレクトリに配置した後、`build_cookies.py` で一括管理ファイルを生成する。
 
 ```bash
-for player in alice bob; do
-    python scrape.py --cookies cookies_${player}.json
-    sleep 5
-done
+# 1. cookies/*.json を自動検出して cookies/all.json を生成
+python build_cookies.py
+
+# 2. 全ユーザー分を一括スクレイピング・マージして出力
+python scrape.py --cookies-all
 ```
+
+`--cookies-all` モードでは、全ユーザーの結果を `match_ts` キーで重複排除してマージする。出力ファイル名のデフォルトは `output/all_{YYYYMMDD}.json`。
+
+いずれかのユーザーの Cookie が期限切れだった場合はそのユーザーをスキップして処理を継続し、最後に警告を表示して終了コード `1` で終了する。
 
 ## 出力形式
 
-出力ファイル名（デフォルト）: `output_{プレイヤー名}_{YYYYMMDD}.json`
+出力ファイル名（デフォルト）: `output/{プレイヤー名}_{YYYYMMDD}.json`
 
 試合データのリスト（`match_ts` 昇順）を JSON で出力する。
 
@@ -153,12 +161,14 @@ done
 
 | 値 | 意味 |
 |----|------|
-| `exbst-f` | EXバースト（格闘型）発動中 |
-| `exbst-s` | EXバースト（射撃型）発動中 |
-| `exbst-e` | EXバースト（延長型）発動中 |
-| `exbst-ov` | 覚醒中（OL） |
-| `ov` | 覚醒ゲージMAX（未発動） |
-| `xb` | エクストラバースト発動 |
-| `is_point: true` | 被撃墜イベント |
+| `ex` | EXバースト発動可能域 |
+| `exbst-f` | ファイティングバースト発動中 |
+| `exbst-s` | シューティングバースト発動中 |
+| `exbst-e` | エクステンドバースト発動中 |
+| `ov` | EXオーバーリミット発動可能域 |
+| `exbst-ov` | EXオーバーリミット発動中 |
+| `xb` | EXバーストクロス |
+| `is_point: true` | 被撃墜 |
+| `com` | データ無し |
 
 時刻の単位はセンチ秒（cs）: `new Date(0, 0, 0, A, B, C)` → `A*6000 + B*100 + C` cs
