@@ -102,10 +102,12 @@ def _parse_score_box(box):
 
 def _merge_scores(team, score_list):
     """Merge score data into team players matched by icon_url."""
+    used = set()
     for player in team['players']:
-        for entry in score_list:
-            if entry['icon_url'] == player['icon_url']:
+        for i, entry in enumerate(score_list):
+            if i not in used and entry['icon_url'] == player['icon_url']:
                 player.update({k: v for k, v in entry.items() if k != 'icon_url'})
+                used.add(i)
                 break
 
 
