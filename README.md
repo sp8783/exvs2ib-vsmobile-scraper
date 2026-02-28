@@ -172,3 +172,47 @@ python scrape.py --cookies-all
 | `com` | データ無し |
 
 時刻の単位はセンチ秒（cs）: `new Date(0, 0, 0, A, B, C)` → `A*6000 + B*100 + C` cs
+
+## GitHub Actions による自動実行
+
+### 概要
+
+`.github/workflows/scrape.yml` ワークフローを使うと、ローカル環境を一切触らずにスクレイピング〜API 送信を一括実行できる。
+
+### 必要な GitHub Secrets
+
+リポジトリの **Settings → Secrets and variables → Actions** に以下の 3 つを登録する。
+
+| シークレット名 | 内容 |
+|---------------|------|
+| `COOKIES_ALL` | `cookies/all.json` の中身をそのまま貼り付けた JSON 文字列 |
+| `TIMESTAMP_API_TOKEN` | vsmobile-kgy の API Bearer トークン |
+| `VSMOBILE_API_URL` | vsmobile-kgy のベース URL（例: `https://example.com`、末尾スラッシュなし） |
+
+#### `COOKIES_ALL` の形式
+
+`python build_cookies.py` で生成される `cookies/all.json` の内容をそのまま貼り付ける。
+
+```json
+{
+  "ぱぴこ": [{ "name": "_session_id", "value": "...", "domain": "web.vsmobile.jp" }],
+  "てるしき": [{ "name": "_session_id", "value": "...", "domain": "web.vsmobile.jp" }]
+}
+```
+
+### 手動実行手順
+
+1. GitHub リポジトリの **Actions** タブを開く
+2. 左メニューから **Scrape and Upload Stats** を選択
+3. **Run workflow** ボタンをクリック
+4. `event_id` に vsmobile-kgy のイベント ID を入力して実行
+
+### エラー時の動作
+
+| 状況 | 挙動 |
+|------|------|
+| Cookie が期限切れ | スクレイパーが終了コード 1 で終了し、`POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
+| API 送信失敗（4xx/5xx） | `POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
+| その他のエラー | 同上 |
+
+いずれの場合も Actions のログ URL がエラーメッセージに含まれる。
