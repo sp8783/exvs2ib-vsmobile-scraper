@@ -38,7 +38,7 @@ jobs:
         run: |
           RESPONSE=$(curl -sf -w "\n%{http_code}" \
             -X POST \
-            -H "Authorization: Bearer ${{ secrets.TIMESTAMP_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.VSMOBILE_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d @output/result.json \
             "${{ secrets.VSMOBILE_API_URL }}/api/events/${{ inputs.event_id }}/stats" 2>&1 || true)
@@ -75,7 +75,7 @@ jobs:
 
           curl -sf \
             -X POST \
-            -H "Authorization: Bearer ${{ secrets.TIMESTAMP_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.VSMOBILE_API_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
             "${{ secrets.VSMOBILE_API_URL }}/api/events/${{ inputs.event_id }}/notify_failure" || true

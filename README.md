@@ -186,7 +186,7 @@ python scrape.py --cookies-all
 | シークレット名 | 内容 |
 |---------------|------|
 | `COOKIES_ALL` | `cookies/all.json` の中身をそのまま貼り付けた JSON 文字列 |
-| `TIMESTAMP_API_TOKEN` | vsmobile-kgy の API Bearer トークン |
+| `VSMOBILE_API_TOKEN` | vsmobile-kgy の API Bearer トークン |
 | `VSMOBILE_API_URL` | vsmobile-kgy のベース URL（例: `https://example.com`、末尾スラッシュなし） |
 
 #### `COOKIES_ALL` の形式
