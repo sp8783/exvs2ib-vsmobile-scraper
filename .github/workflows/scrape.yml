@@ -1,4 +1,4 @@
-name: Scrape and Upload Stats
+name: 統計データ スクレイピング・自動送信
 
 on:
   workflow_dispatch:
@@ -13,27 +13,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Python セットアップ
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: 依存パッケージをインストール
         run: pip install -r requirements.txt
 
-      - name: Write cookies from secret
+      - name: Cookie をシークレットから書き込む
         run: |
           mkdir -p cookies
           echo '${{ secrets.COOKIES_ALL }}' > cookies/all.json
 
-      - name: Run scraper
+      - name: スクレイパーを実行
         id: scrape
         run: python scrape.py --cookies-all --output output/result.json
 
-      - name: Upload stats to API
+      - name: 統計データを API に送信
         id: upload
         run: |
           RESPONSE=$(curl -sf -w "\n%{http_code}" \
@@ -54,11 +54,11 @@ jobs:
             exit 1
           fi
 
-      - name: Cleanup cookies
+      - name: Cookie を削除
         if: always()
         run: rm -f cookies/all.json
 
-      - name: Notify failure
+      - name: 失敗を vsmobile-kgy API に通知
         if: failure()
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
