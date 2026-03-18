@@ -99,8 +99,9 @@ def _run_single(cookies_path, output_path):
     results.sort(key=lambda r: r['match_ts'])
     out = output_path or f'output/{self_name}_{game_date_str}.json'
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    payload = {'matches': results, 'expired_users': []}
     with open(out, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f'Done. {len(results)} matches written to {out}')
 
 
@@ -141,13 +142,13 @@ def _run_all(cookies_all_path, output_path):
     all_results.sort(key=lambda r: r['match_ts'])
     out = output_path or f'output/all_{game_date_str}.json'
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    payload = {'matches': all_results, 'expired_users': failed}
     with open(out, 'w', encoding='utf-8') as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f'\nDone. {len(all_results)} unique matches written to {out}')
 
     if failed:
         print(f'[WARN] Cookie expired for: {", ".join(failed)}', file=sys.stderr)
-        sys.exit(1)
 
 
 def main():
