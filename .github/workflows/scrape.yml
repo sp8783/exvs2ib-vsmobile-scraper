@@ -64,7 +64,7 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           if [ "${{ steps.scrape.outcome }}" = "failure" ]; then
-            ERROR_MSG="スクレイパーの実行に失敗しました（Cookie が期限切れの可能性があります）。ログ: $RUN_URL"
+            ERROR_MSG="スクレイパーの実行に失敗しました（全ユーザーの Cookie が期限切れの可能性があります）。ログ: $RUN_URL"
           elif [ "${{ steps.upload.outcome }}" = "failure" ]; then
             ERROR_MSG="API への送信に失敗しました。ログ: $RUN_URL"
           else
