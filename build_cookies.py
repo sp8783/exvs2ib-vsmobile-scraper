@@ -9,6 +9,17 @@ import sys
 COOKIES_DIR = 'cookies'
 OUTPUT = os.path.join(COOKIES_DIR, 'all.json')
 
+SESSION_DOMAIN = 'web.vsmobile.jp'
+SESSION_NAME = 'laravel_session'
+
+
+def _extract_session_cookie(cookies):
+    """Extract only the laravel_session cookie from a cookie list."""
+    for c in cookies:
+        if c.get('name') == SESSION_NAME and SESSION_DOMAIN in c.get('domain', ''):
+            return [{'name': c['name'], 'value': c['value'], 'domain': c['domain']}]
+    return []
+
 
 def main():
     pattern = os.path.join(COOKIES_DIR, '*.json')
@@ -22,8 +33,12 @@ def main():
         name = os.path.splitext(os.path.basename(path))[0]
         with open(path, encoding='utf-8') as f:
             cookies = json.load(f)
-        all_cookies[name] = cookies
-        print(f'  Loaded: {path!r}  ({len(cookies)} cookies) → user={name!r}')
+        session_cookie = _extract_session_cookie(cookies)
+        if not session_cookie:
+            print(f'  [WARN] {path!r}: laravel_session not found, skipping', file=sys.stderr)
+            continue
+        all_cookies[name] = session_cookie
+        print(f'  Loaded: {path!r} → user={name!r}')
 
     with open(OUTPUT, 'w', encoding='utf-8') as f:
         json.dump(all_cookies, f, ensure_ascii=False, indent=2)
