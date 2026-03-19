@@ -76,64 +76,97 @@ python scrape.py --cookies-all
 
 `--cookies-all` モードでは、全ユーザーの結果を `match_ts` キーで重複排除してマージする。出力ファイル名のデフォルトは `output/all_{YYYYMMDD}.json`。
 
-いずれかのユーザーの Cookie が期限切れだった場合はそのユーザーをスキップして処理を継続し、最後に警告を表示して終了コード `1` で終了する。
+一部ユーザーの Cookie が期限切れだった場合はそのユーザーをスキップして処理を継続し、最後に警告を表示する。期限切れユーザー名は出力 JSON の `expired_users` フィールドに含まれる。全ユーザーの Cookie が期限切れだった場合のみ終了コード `1` で終了する。
+
+### Cookie の疎通確認
+
+スクレイピング前に Cookie が有効かどうかだけを確認したい場合（対戦履歴がない状態での確認など）は `check_auth.py` を使う。
+
+```bash
+# 単一ユーザーの確認（cookies/cookies.json）
+python check_auth.py
+
+# Cookie ファイルを指定
+python check_auth.py --cookies cookies/alice.json
+
+# 全ユーザーを一括確認（cookies/all.json）
+python check_auth.py --all
+```
+
+出力例:
+```
+[CHECK] ぱぴこ ... OK
+[CHECK] りーん ... EXPIRED
+
+Result: 1 OK / 1 EXPIRED
+```
+
+全員有効なら終了コード `0`、1人でも期限切れがあれば終了コード `1` で終了する。
 
 ## 出力形式
 
 出力ファイル名（デフォルト）: `output/{プレイヤー名}_{YYYYMMDD}.json`
 
-試合データのリスト（`match_ts` 昇順）を JSON で出力する。
+試合データのリスト（`match_ts` 昇順）と期限切れ Cookie ユーザー一覧を JSON で出力する。
 
 ```json
-[
-  {
-    "match_ts": "1739500000",
-    "time": "14:32",
-    "game_date": "2026/02/14(土)",
-    "shop_name": "〇〇ゲームセンター",
-    "team_a": {
-      "team_name": "チームA",
-      "result": "win",
-      "players": [
-        {
-          "name": "プレイヤー1",
-          "player_param": "AbCdEfGh...",
-          "icon_url": "https://example.com/icon.png",
-          "mastery": "blue5",
-          "prefecture": "東京都",
-          "is_self": true,
-          "match_rank": 1,
-          "score": 12000,
-          "kills": 3,
-          "deaths": 1,
-          "damage_dealt": 8500,
-          "damage_received": 3200,
-          "exburst_damage": 1500
-        }
-      ]
-    },
-    "team_b": { "...": "..." },
-    "timeline_raw": {
-      "groups": {
-        "team1-1": "https://example.com/unit_icon.png"
+{
+  "matches": [
+    {
+      "match_ts": "1739500000",
+      "time": "14:32",
+      "game_date": "2026/02/14(土)",
+      "shop_name": "〇〇ゲームセンター",
+      "team_a": {
+        "team_name": "チームA",
+        "result": "win",
+        "players": [
+          {
+            "name": "プレイヤー1",
+            "player_param": "AbCdEfGh...",
+            "icon_url": "https://example.com/icon.png",
+            "mastery": "blue5",
+            "prefecture": "東京都",
+            "is_self": true,
+            "match_rank": 1,
+            "score": 12000,
+            "kills": 3,
+            "deaths": 1,
+            "damage_dealt": 8500,
+            "damage_received": 3200,
+            "exburst_damage": 1500
+          }
+        ]
       },
-      "events": [
-        {
-          "group": "team1-1",
-          "start_cs": 1500,
-          "start_str": "0:15.00",
-          "end_cs": 4200,
-          "end_str": "0:42.00",
-          "class_name": "exbst-s",
-          "is_point": false
-        }
-      ],
-      "game_end_cs": 36000,
-      "game_end_str": "6:00.00"
+      "team_b": { "...": "..." },
+      "timeline_raw": {
+        "groups": {
+          "team1-1": "https://example.com/unit_icon.png"
+        },
+        "events": [
+          {
+            "group": "team1-1",
+            "start_cs": 1500,
+            "start_str": "0:15.00",
+            "end_cs": 4200,
+            "end_str": "0:42.00",
+            "class_name": "exbst-s",
+            "is_point": false
+          }
+        ],
+        "game_end_cs": 36000,
+        "game_end_str": "6:00.00"
+      }
     }
-  }
-]
+  ],
+  "expired_users": ["りーん"]
+}
 ```
+
+| フィールド | 説明 |
+|-----------|------|
+| `matches` | 試合データのリスト（`match_ts` 昇順） |
+| `expired_users` | Cookie が期限切れだったユーザー名のリスト。全員有効なら `[]` |
 
 ### フィールド説明
 
@@ -191,12 +224,12 @@ python scrape.py --cookies-all
 
 #### `COOKIES_ALL` の形式
 
-`python build_cookies.py` で生成される `cookies/all.json` の内容をそのまま貼り付ける。
+`python build_cookies.py` で生成される `cookies/all.json` の内容をそのまま貼り付ける。`build_cookies.py` は各ユーザーの `laravel_session` のみを抽出してマージする。
 
 ```json
 {
-  "ぱぴこ": [{ "name": "_session_id", "value": "...", "domain": "web.vsmobile.jp" }],
-  "てるしき": [{ "name": "_session_id", "value": "...", "domain": "web.vsmobile.jp" }]
+  "ぱぴこ": [{ "name": "laravel_session", "value": "...", "domain": "web.vsmobile.jp" }],
+  "てるしき": [{ "name": "laravel_session", "value": "...", "domain": "web.vsmobile.jp" }]
 }
 ```
 
@@ -211,7 +244,8 @@ python scrape.py --cookies-all
 
 | 状況 | 挙動 |
 |------|------|
-| Cookie が期限切れ | スクレイパーが終了コード 1 で終了し、`POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
+| 一部ユーザーの Cookie が期限切れ | 有効なユーザー分のデータを取得し、`expired_users` に期限切れユーザー名を含めて API に送信 |
+| 全ユーザーの Cookie が期限切れ | スクレイパーが終了コード 1 で終了し、`POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
 | API 送信失敗（4xx/5xx） | `POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
 | その他のエラー | 同上 |
 
