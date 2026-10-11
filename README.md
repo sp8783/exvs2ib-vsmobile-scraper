@@ -249,4 +249,4 @@ Result: 1 OK / 1 EXPIRED
 | API 送信失敗（4xx/5xx） | `POST /api/events/{id}/notify_failure` にエラーメッセージを送信 |
 | その他のエラー | 同上 |
 
-いずれの場合も Actions のログ URL がエラーメッセージに含まれる。
+いずれの場合も Actions のログ URL がエラーメッセージに含まれる。`notify_failure` には `source: stats` を付けて送り、vsmobile-kgy では「統計スクレイピング失敗」の題名で管理者に通知される。

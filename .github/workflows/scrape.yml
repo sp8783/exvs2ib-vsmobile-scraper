@@ -71,7 +71,7 @@ jobs:
             ERROR_MSG="ワークフローが失敗しました。ログ: $RUN_URL"
           fi
 
-          PAYLOAD=$(python3 -c "import json, sys; print(json.dumps({'error': sys.argv[1]}))" "$ERROR_MSG")
+          PAYLOAD=$(python3 -c "import json, sys; print(json.dumps({'error': sys.argv[1], 'source': 'stats'}))" "$ERROR_MSG")
 
           curl -sf \
             -X POST \
