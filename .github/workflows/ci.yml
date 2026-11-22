@@ -1,0 +1,35 @@
+name: CI
+
+# 依存が入り、コードが読み込めて --help が出ることを確かめる（Dependabot の PR を自動でマージする門）
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: 読み込めることを確かめる
+        run: |
+          python -m compileall -q .
+          python scrape.py --help
+          python build_cookies.py --help
+          python check_auth.py --help
